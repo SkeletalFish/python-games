@@ -1,0 +1,6 @@
+1;2,6;Exit
+2;3
+3;2;Bats
+4;5,6;Gold
+5;4;Wumpus
+6;1,4;Pit
