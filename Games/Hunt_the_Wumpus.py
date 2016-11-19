@@ -188,149 +188,17 @@ class CaveSystem():
         print(LINE_BREAK)
 
     def validate(self,verbosity=0):
-        ## verbosity = 0 -> Output boolean 'valid'
-        ##           = 1 -> Output 'Map Failed' error and boolean 'valid' 
-        ##           = 2 -> Output all errors or 'Map Ok' and boolean 'valid'
-        ##           = 3 -> Output all
-        valid = True
-        
-        ## Add visited status
-        ## Transpose graph
-        cave_1 = self.rooms
-        for room_id,room_data in cave_1.items():
-            room_data.append([])
-            room_data.append(False)
-        cave_1 = transpose(cave_1)
-        
-        ## Check one wumpus exists
-        ## Check one gold exists
-        ## Check at least one exit exists
-        ## Check exit nodes only contain an exit
-        wumpus_found = 0
-        gold_found = 0
-        exit_found = 0
-        bats_found = 0
-        exit_valid = False
-        check_wumpus = None
-        check_gold = None
-        for room_id,room_data in cave_1.items():
-            if WUMPUS in room_data[ROOM_CONTENTS]:
-                wumpus_found += 1
-            if GOLD in room_data[ROOM_CONTENTS]:
-                gold_found += 1
-            if EXIT in room_data[ROOM_CONTENTS]:
-                if room_data[ROOM_CONTENTS] == [EXIT]:
-                    exit_valid = True
-                exit_found += 1
-            if BATS in room_data[ROOM_CONTENTS]:
-                bats_found += 1
-
-        ## Check graph is connected
-        is_connected = False
-        for room_id in cave_1:
-            cave_1 = reset_visited(cave_1)
-            check = connected(cave_1,room_id,False)
-            temp_connected = True
-            for room_id,room_data in check.items():
-                if room_data[ROOM_VISITED] == False:
-                    temp_connected = False
-            if temp_connected == True:
-                is_connected = True
-                break
-        
-        if is_connected:        
-            ## Find Strongly Connected Components
-            ##  See Kosaraju's Algorithm
-            partitions = scc(create_graph(self.rooms))
-                    
-            ## Make sure each SCC contains a bat if there is more than one
-            if len(partitions) > 1:
-                for id,partition in partitions.items():
-                    bats_found = False
-                    for room in partition:
-                        if BATS in self.rooms[room][ROOM_CONTENTS]:
-                            bats_found = True
-                    if bats_found:
-                        if verbosity >= 3: yield "Bats Ok in partition " + str(partition)
-                    else:
-            ## If no bats in partition make sure you can move to one with bats
-                        for room in partition:
-                            bats_found = self.df_walk(room,BATS)
-                            if bats_found[0] != None: break
-                        if bats_found[0] != None:
-                            if verbosity >= 3: yield "Path from partition " + str(partition) + " to Bats in room " + str(bats_found) + " found"
-                        else:
-                            valid = False
-                            if verbosity >= 2: yield "Bats Missing from partition " + str(partition)
-
-            ## Check wumpus and gold is accessible
-            check_wumpus = self.df_walk(self.find_exit(),WUMPUS)
-            check_gold = self.df_walk(self.find_exit(),GOLD)
-            
-            ## If multiple SCC's
-            ##   No pits next to wumpus or gold
-            ##   No bats next to wumpus
-            ##  If one SCC
-            ##   Walk through cave and make sure wumpus and gold are visited
-            ##   Treat pits as having no connected rooms, and don't flag as visited (don't count in total rooms)
-            ##   Ignore bats
-
-        ## Output validation statements
-        if check_wumpus == None:
-            valid = False
-            if verbosity >= 2: yield "Unable to reach Wumpus"
-        else:
-            if verbosity >= 3: yield "Wumpus reached in room " + str(check_wumpus)
-            
-        if check_gold == None:
-            valid = False
-            if verbosity >= 2: yield "Unable to reach Gold"
-        else:
-            if verbosity >= 3: yield "Gold reached in room " + str(check_gold)
-            
-        if not is_connected:
-            valid = False
-            if verbosity >= 2: yield "Not Connected"
-        else:
-            if verbosity >= 3: yield "Connected"
-            
-        if wumpus_found == 0:
-            valid = False
-            if verbosity >= 2: yield WUMPUS+" Missing"
-        elif wumpus_found > 2:
-            valid = False
-            if verbosity >= 2: yield WUMPUS+" Count Too High"
-        else:
-            if verbosity >= 3: yield WUMPUS+" Count Ok"
-            
-        if gold_found == 0:
-            valid = False
-            if verbosity >= 2: yield GOLD+" Missing"
-        elif gold_found > 1:
-            valid = False
-            if verbosity >= 2: yield GOLD+" Count Too High"
-        else:
-            if verbosity >= 3: yield GOLD+" Count Ok"
-            
-        if exit_found == 0:
-            valid = False
-            if verbosity >= 2: yield EXIT+" Missing"
-        else:
-            if verbosity >= 3: yield EXIT+" Count Ok"
-
-        if not exit_valid:
-            valid = False
-            if verbosity >= 2: yield "Exit Invalid"
-        else:
-            if verbosity >= 3: yield "Exit Valid"
-
-        if valid:
-            if verbosity >= 2: yield "Map Ok"
-            if verbosity >= 0: yield True
-        else:
-            if verbosity >= 1: yield "Map Failed"
-            if verbosity >= 0: yield False
-        
+        ## Must be exactly one Wumpus in a room containing only the Wumpus
+        ## Must be exactly one Gold in a room containing only the Gold
+        ## Must be exactly one Exit in a room containing only the Exit
+        ## Exit must not be connected to any room containing a Pit, the Wumpus or Bats
+        ## Must be connected
+        ## Wumpus must be reachable from the Exit
+        ## Gold must be reachable from the Exit
+        ## For every Strongly Connected Component
+        ##   Must be at least one empty room
+        ##   Bats must be accessible from every empty room (in this or a connected SCC)
+        ##   Room containing Bats must only contain Bats
 
     def edit(self):
         ## map edit/create loop, including validation
