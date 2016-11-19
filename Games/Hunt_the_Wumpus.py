@@ -669,14 +669,21 @@ class Player():
                 print("You have fallen in a pit")
             elif self.status == "escaped":
                 print("You have killed the Wumpus and escaped with the gold")
-            elif self.status == "carried":
-                found = False
-                while not found:
-                    move_to = random.choice(list(self.cave.rooms.keys()))
-                    if WUMPUS not in self.cave.rooms[move_to][ROOM_CONTENTS] and PIT not in self.cave.rooms[move_to][ROOM_CONTENTS] and BATS not in self.cave.rooms[move_to][ROOM_CONTENTS]:
-                        found = True
-                        self.move(move_to)
-        
+        if self.status == "carried":
+            found = False
+            while not found:
+                partitions = scc(create_graph(self.cave.rooms))
+                temp = partitions
+                for partition_root,partition in partitions:
+                    if self.location in parition:
+                        del temp[partition_root]
+                room_list = []
+                for partition_root,partition in temp:
+                    room_list += partition
+                move_to = random.choice(room_list)
+                if WUMPUS not in self.cave.rooms[move_to][ROOM_CONTENTS] and PIT not in self.cave.rooms[move_to][ROOM_CONTENTS] and BATS not in self.cave.rooms[move_to][ROOM_CONTENTS]:
+                    found = True
+                    self.move(move_to)
                 
 if __name__ == "__main__":
     while True:
