@@ -289,6 +289,15 @@ class CaveSystem():
                 if PIT in room_data[ROOM_CONTENTS] and room_id in room_ids:
                     yield room_id
 
+    def find_empty(self,room_ids=None):
+        for room_id,room_data in self.rooms.items():
+            if room_ids == None:
+                if room_data[ROOM_CONTENTS] == []:
+                    yield room_id
+            else:
+                if room_data[ROOM_CONTENTS] == [] and room_id in room_ids:
+                    yield room_id
+                    
     def render(self,file_name=None,show_player=False,player_location=None):
         if file_name == None:
             file_name = self.name+".gv"
