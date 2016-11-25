@@ -360,15 +360,15 @@ class CaveSystem():
                     
         if check_wumpus == None:
             valid = False
-            if verbosity >= 2: yield "Unable to reach Wumpus"
+            if verbosity >= 2: yield "Fail - Unable to reach Wumpus"
         else:
-            if verbosity >= 3: yield "Wumpus reached in room " + str(check_wumpus)
+            if verbosity >= 3: yield "Pass - Wumpus reached in room " + str(check_wumpus)
             
         if check_gold == None:
             valid = False
-            if verbosity >= 2: yield "Unable to reach Gold"
+            if verbosity >= 2: yield "Fail - Unable to reach Gold"
         else:
-            if verbosity >= 3: yield "Gold reached in room " + str(check_gold)
+            if verbosity >= 3: yield "Pass - Gold reached in room " + str(check_gold)
 
         if valid == True:
             if verbosity >= 2: yield "Pass - Map Ok"
