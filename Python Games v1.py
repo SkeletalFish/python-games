@@ -8,9 +8,9 @@ for module in Games.__all__:
     if module != "__init__":
         games.append(importlib.import_module("Games."+module,"Games"))
 
-section_break = "######################################"
-line_break = "______________________________________"
-    
+section_break = "#"*64
+line_break = "_"*64
+
 def yesno(prompt):
     input_ok = False
     while input_ok == False:

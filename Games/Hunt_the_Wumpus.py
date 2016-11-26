@@ -17,8 +17,8 @@ GOLD = "Gold"
 ARROW = "Arrow"
 EXIT = "Exit"
 BATS = "Bats"
-SECTION_BREAK = "###############################################################"
-LINE_BREAK = "==============================================================="
+SECTION_BREAK = "#"*64
+LINE_BREAK = "="*64
 FILE_PATH = os.path.dirname(__file__)
 
 def yesno(prompt):
