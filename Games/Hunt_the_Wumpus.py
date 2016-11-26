@@ -2,6 +2,7 @@ import random
 import re
 import os
 import queue
+import os.path
 # Make graphviz optional
 try:
     from graphviz import Digraph
@@ -108,15 +109,187 @@ def scc(graph):
     return components
         
 class Main():
-    def __init__(self):
+    def __init__(self,verbose=False):
         print("Main Loop Under Construction")
         print("Run Game from \\Games\\Hunt_the_Wumpus.py")
+        self.current_cave = None
+        self.cave_file_name = None
+        self.cave = CaveSystem()
+        self.cave_list = [["dodecahedron", "Classic"], ["debug1", "Debug"]]
+        self.verbose = verbose
     ## Introduction
     ## Game mode selection
     ##  Map Selection
     ##   Create New
     ##   Load Existing
     ## Game play loop
+        self.main_loop()
+
+    def main_loop(self):
+        exit_game = False
+        while not exit_game:
+            self.menu_instructions()
+            option = self.menu_options()
+            if option == "0":
+                exit_game = True
+            elif option == "1":
+                # Launch Cave Selection
+                self.menu_select_cave()
+                # Build cave (either from file or from built-in function
+                ready = self.build_cave()
+                if ready:
+                    self.game_loop()
+                else:
+                    print("Cave failed validation")
+            elif option == "2":
+                # Launch Cave Creation
+                pass
+
+    def menu_instructions(self):
+        print(SECTION_BREAK)
+        print("Hunt the Wumpus")
+        print(LINE_BREAK)
+        print("Instructions:")
+        print("...")
+
+    def menu_options(self):
+        print(SECTION_BREAK)
+        print("Main Menu:")
+        print("1: Play Game")
+        print("2: Create Cave")
+        print("0: Exit")
+        print(LINE_BREAK)
+        input_valid = False
+        option = None
+        option_count = 2
+        while not input_valid:
+            selected_option = input("Please choose an option: ")
+            if selected_option == "0":
+                print(section_break)
+                confirm = yesno("Are you sure you wish to exit? [Y/N] ")
+                if confirm == "Y":
+                    option = "0"
+                    input_valid = True
+            elif int(selected_option) <= option_count:
+                option = selected_option
+                input_valid = True
+            else:
+                print("Invalid option")
+
+        return option
+
+    def menu_select_cave(self):
+        print(SECTION_BREAK)
+        print("Cave Selection")
+        print("1: Load from file")
+        print("2: Select Built-in Cave")
+        print("0: Return to Main Menu")
+        input_valid = False
+        option = None
+        while not input_valid:
+            selected_option = input("Please choose an option: ")
+            if selected_option == "0":
+                input_valid = True
+            elif selected_option == "1":
+                input_valid = True
+                self.menu_load_cave()
+            elif selected_option == "2":
+                input_valid = True
+                self.menu_preset_cave()
+            else:
+                print("Invalid option")
+
+    def menu_preset_cave(self):
+        menu_counter = 1
+        print(SECTION_BREAK)
+        print("Built-in Caves:")
+        for each in self.cave_list:
+            print(str(menu_counter) + ": " + each[1])
+            menu_counter += 1
+        print("0: Exit")
+        input_valid = False
+        option = None
+        print(LINE_BREAK)
+        while not input_valid:
+            selected_option = input("Please choose an option: ")
+            try:
+                selected_option = int(selected_option)
+                if selected_option in range(1,menu_counter):
+                    self.current_cave = self.cave_list[selected_option-1][0]
+                    input_valid = True
+                elif selected_option == 0:
+                    input_valid = True
+                else:
+                    print("Invalid option")
+            except ValueError:
+                print("Invalid option")
+    
+    def menu_load_cave(self):
+        print(LINE_BREAK)
+        input_valid = False
+        while not input_valid:
+            temp = input("Enter Cave name: ")
+            if os.path.isfile(FILE_PATH + "\\Data\\Wumpus\\Maps\\" + temp + ".txt","r"):
+                input_valid = True
+                self.current_cave = temp
+                self.cave_file_name = temp
+            else:
+                print("Invalid file name")
+    
+    def menu_save_cave(self):
+        print(LINE_BREAK)
+        input_valid = False
+        while not input_valid:
+            temp = input("Enter Cave name: ")
+            self.cave_file_name = temp
+            self.current_cave = temp
+            self.cave.save(self.current_cave)
+            input_valid = True
+
+    def game_loop(self):
+        player = Player(list(self.cave.find_items([EXIT],False))[0],self.cave)
+        step_number = 0
+        if self.verbose: self.cave.render(self.cave.name+"_"+str(step_number)+".gv",True,player.location)
+        step_number += 1
+        player.display_info()
+        while player.status == "alive":
+            player.choose_action()
+            if self.verbose: self.cave.render(self.cave.name+"_"+str(step_number)+".gv",True,player.location)
+            step_number += 1
+            player.display_info()
+        input("Press enter to return to the main menu")
+
+    def build_cave(self):
+        if self.current_cave != None and self.cave_file_name == None:
+            # Built-in Cave
+            self.cave.name = self.current_cave
+            self.cave.build_preset()
+            if self.verbose: self.cave.display()
+            if self.verbose: self.cave.render()
+            if self.verbose: validation = self.cave.validate(3)
+            if not self.verbose: validation = self.cave.validate(2)
+            run_game = False
+            for each in validation:
+                if isinstance(each,str):
+                    print(each)
+            if each == True:
+                run_game = True
+        elif self.cave_file_name != None:
+            # Load from file
+            self.cave.name = self.current_cave
+            self.cave.load()
+            if self.verbose: self.cave.display()
+            if self.verbose: self.cave.render()
+            if self.verbose: validation = self.cave.validate(3)
+            if not self.verbose: validation = self.cave.validate(2)
+            run_game = False
+            for each in validation:
+                if isinstance(each,str):
+                    print(each)
+            if each == True:
+                run_game = True
+
+        return run_game
 
 class CaveSystem():
     def __init__(self,name=None):
@@ -597,7 +770,7 @@ class CaveSystem():
             if self.name == None:
                 raise Exception("Error - Cave has no name")
         if preset_name == "dodecahedron":
-            cave.name = preset_name
+            self.name = preset_name
             print("Building Preset '"+preset_name+"'")
             self.add_rooms(20)
             self.add_tunnel(1,2)
@@ -632,7 +805,7 @@ class CaveSystem():
             self.add_tunnel(16,20)
             self.add_random_contents(verbose)
         elif preset_name == "debug1":
-            cave.name = preset_name
+            self.name = preset_name
             self.add_room(1)
             self.add_room(2)
             self.add_room(3)
@@ -850,28 +1023,4 @@ class Player():
                 
 if __name__ == "__main__":
     while True:
-        cave = CaveSystem("debug1")
-        cave.build_preset()
-        cave.save()
-        cave.display() # Only if debug
-        cave.render() # Only if debug
-        validation = cave.validate(3) # Only if debug
-        #validation = cave.validate(2) # Only if not debug
-        run_game = False
-        for each in validation:
-            if isinstance(each,str):
-                print(each)
-        if each == True:
-            run_game = True
-        if run_game:
-            player = Player(list(cave.find_items([EXIT],False))[0],cave)
-            step_number = 0
-            cave.render(cave.name+"_"+str(step_number)+".gv",True,player.location) # Only if debug
-            step_number += 1
-            player.display_info()
-            while player.status == "alive":
-                player.choose_action()
-                cave.render(cave.name+"_"+str(step_number)+".gv",True,player.location) # Only if debug
-                step_number += 1
-                player.display_info()
-        input("Press enter to start again, Ctrl-C to quit")
+        Main(True)
