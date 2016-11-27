@@ -110,8 +110,6 @@ def scc(graph):
         
 class Main():
     def __init__(self,verbose=False):
-        print("Main Loop Under Construction")
-        print("Run Game from \\Games\\Hunt_the_Wumpus.py")
         self.current_cave = None
         self.cave_file_name = None
         self.cave = CaveSystem()
@@ -128,22 +126,32 @@ class Main():
     def main_loop(self):
         exit_game = False
         while not exit_game:
+            input_valid = False
             self.menu_instructions()
             option = self.menu_options()
-            if option == "0":
-                exit_game = True
-            elif option == "1":
-                # Launch Cave Selection
-                self.menu_select_cave()
-                # Build cave (either from file or from built-in function
-                ready = self.build_cave()
-                if ready:
-                    self.game_loop()
+            while not input_valid:
+                if option == "0":
+                    print(section_break)
+                    confirm = yesno("Are you sure you wish to exit? [Y/N] ")
+                    if confirm == "Y":
+                        input_valid = True
+                        exit_game = True
+                elif option == "1":
+                    input_valid = True
+                    # Launch Cave Selection
+                    self.menu_select_cave()
+                    # Build cave (either from file or from built-in function
+                    ready = self.build_cave()
+                    if ready:
+                        self.game_loop()
+                    else:
+                        print("Cave failed validation")
+                elif option == "2":
+                    input_valid = True
+                    # Launch Cave Creation
+                    self.create_cave()
                 else:
-                    print("Cave failed validation")
-            elif option == "2":
-                # Launch Cave Creation
-                pass
+                    print("Invalid input")
 
     def menu_instructions(self):
         print(SECTION_BREAK)
@@ -165,7 +173,7 @@ class Main():
         while not input_valid:
             selected_option = input("Please choose an option: ")
             if selected_option == "0":
-                print(section_break)
+                print(SECTION_BREAK)
                 confirm = yesno("Are you sure you wish to exit? [Y/N] ")
                 if confirm == "Y":
                     option = "0"
@@ -184,6 +192,7 @@ class Main():
         print("1: Load from file")
         print("2: Select Built-in Cave")
         print("0: Return to Main Menu")
+        print(LINE_BREAK)
         input_valid = False
         option = None
         while not input_valid:
@@ -260,41 +269,65 @@ class Main():
         input("Press enter to return to the main menu")
 
     def build_cave(self):
+        run_game = False
         if self.current_cave != None and self.cave_file_name == None:
             # Built-in Cave
             self.cave.name = self.current_cave
             self.cave.build_preset()
             if self.verbose: self.cave.display()
             if self.verbose: self.cave.render()
-            if self.verbose: validation = self.cave.validate(3)
-            if not self.verbose: validation = self.cave.validate(2)
-            run_game = False
-            for each in validation:
-                if isinstance(each,str):
-                    print(each)
-            if each == True:
-                run_game = True
+            run_game = self.cave.display_validation()
         elif self.cave_file_name != None:
             # Load from file
             self.cave.name = self.current_cave
             self.cave.load()
             if self.verbose: self.cave.display()
             if self.verbose: self.cave.render()
-            if self.verbose: validation = self.cave.validate(3)
-            if not self.verbose: validation = self.cave.validate(2)
-            run_game = False
-            for each in validation:
-                if isinstance(each,str):
-                    print(each)
-            if each == True:
-                run_game = True
+            run_game = self.cave.display_validation()
 
         return run_game
+    
+    def create_cave(self):
+        done = False
+        if self.current_cave == None:
+            self.current_cave = input("Please enter a name for your cave: ")
+            self.cave_file_name = self.current_cave
+        print(SECTION_BREAK)
+        while not done:
+            print("Custom Cave Creation Under Construction")
+            self.cave.display_parameters()
+            print(LINE_BREAK)
+            print("1: Modify rooms")
+            print("2: Modify tunnels")
+            print("3: Modify contents")
+            print("4: Randomise contents")
+            print("5: Validate cave")
+            print("6: Load cave")
+            print("7: Save cave")
+            print("8: Reset cave")
+            print("9: Rename cave")
+            print("0: Done")
+            print(LINE_BREAK)
+            input_valid = False
+            while not input_valid:
+                selected_option = input("Please choose an option: ")
+                if selected_option == "1":
+                    print(section_break)
+                    confirm = yesno("Are you sure you have finished? [Y/N] ")
+                    if confirm == "Y":
+                        input_valid = True
+                        done = True
+        self.cave.display_parameters()
+        print(section_break)
+        confirm = yesno("Do you wish to save? [Y/N] ")
+        if confirm == "Y":
+            self.cave.save()
 
 class CaveSystem():
-    def __init__(self,name=None):
+    def __init__(self,name=None,verbose = False):
         self.rooms = {}
         self.name = name
+        self.verbose = verbose
         
     def add_room(self,id):
         self.rooms[id] = [[],[]]
@@ -824,7 +857,21 @@ class CaveSystem():
             self.add_contents(EXIT,1)
             self.add_contents(PIT,6)
         else:
-            print("Error - Preset '"+preset_name+"' not found")        
+            print("Error - Preset '"+preset_name+"' not found")
+
+    def display_validation(self):
+        if self.verbose: validation = self.validate(3)
+        if not self.verbose: validation = self.validate(2)
+        for each in validation:
+            if isinstance(each,str):
+                print(each)
+        return each
+
+    def display_parameters(self):
+        print("Name: " + self.name)
+        print("Number of Rooms: " + str(len(self.rooms)))
+        if len(self.rooms) > 0:
+            self.display_validation()
     
 class Player():
     def __init__(self,room_id,cave):
