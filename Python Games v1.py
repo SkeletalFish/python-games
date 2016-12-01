@@ -8,8 +8,8 @@ for module in Games.__all__:
     if module != "__init__":
         games.append(importlib.import_module("Games."+module,"Games"))
 
-section_break = "#"*64
-line_break = "_"*64
+SECTION_BREAK = "#"*64
+LINE_BREAK = "_"*64
 
 def yesno(prompt):
     input_ok = False
@@ -28,16 +28,16 @@ class Main(): # Main class, runs the menu and game loops, run automatically when
     def display_menu(self): # Displays the menus
         exit_program = False
         while not exit_program:
-            print(section_break)
+            print(SECTION_BREAK)
             print("Main Menu")
             print("1: Select Game")
             print("0: Exit")
-            print(line_break)
+            print(LINE_BREAK)
             valid_input_1 = False
             while not valid_input_1:
                 selected_option = input("Please choose an option: ")
                 if selected_option == "0":
-                    print(section_break)
+                    print(SECTION_BREAK)
                     confirm = yesno("Are you sure you wish to exit? [Y/N] ")
                     if confirm == "Y":
                         #sys.exit(0)
@@ -45,12 +45,12 @@ class Main(): # Main class, runs the menu and game loops, run automatically when
                         exit_program = True
                 elif selected_option == "1":
                     valid_input_1 = True
-                    print(section_break)
+                    print(SECTION_BREAK)
                     print("Select Game")
                     for i in range(0,len(games)):
                         print(str(i+1) + ": " + games[i].__name__.split(".")[1].replace("_"," "))
                     print("0: Back")
-                    print(line_break)
+                    print(LINE_BREAK)
                     valid_input_2 = False
                     while not valid_input_2:
                         selected_option = input("Please choose a game: ")
@@ -67,7 +67,7 @@ class Main(): # Main class, runs the menu and game loops, run automatically when
                             print("Invalid option")
                 else:
                     print("Invalid option")
-        print(section_break)
+        print(SECTION_BREAK)
                             
     def play_game(self, game): # Runs a specified game
         if game in range(1,len(games)+1):

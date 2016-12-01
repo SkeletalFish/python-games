@@ -1,14 +1,16 @@
+## Required libraries
 import random
 import re
 import os
 import queue
 import os.path
-# Make graphviz optional
+## Make graphviz optional
 try:
     from graphviz import Digraph
 except ImportError:
     Digraph = False
 
+## Define constants
 ROOM_CONTENTS = 0
 ROOM_LINKS = 1
 ROOM_REVERSED = 2
@@ -23,6 +25,7 @@ SECTION_BREAK = "#"*64
 LINE_BREAK = "="*64
 FILE_PATH = os.path.dirname(__file__)
 
+## Yes/No question
 def yesno(prompt):
     input_ok = False
     while input_ok == False:
@@ -34,12 +37,14 @@ def yesno(prompt):
             print("Please enter Y or N.")
     return output
 
+## Transpose all tunnels
 def transpose(cave):
     for room_id,room_data in cave.items():
         for link in room_data[ROOM_LINKS]:
             cave[link][ROOM_REVERSED].append(room_id)
     return cave
 
+## Check cave is connected
 def connected(cave,room_id,reverse=False):
     cave[room_id][ROOM_VISITED] = True
     if not reverse:
@@ -53,11 +58,14 @@ def connected(cave,room_id,reverse=False):
                 cave = connected(cave,link,reverse)
         return cave
 
+## Reset visited status of each room
 def reset_visited(cave):
     for room_id,room_data in cave.items():
         room_data[ROOM_VISITED] = False
     return cave
 
+## Convert a cave in format {<cave_id>:[[cave_contents],[cave_links]]
+## into ([nodes],[edges])
 def create_graph(rooms):
     V = []
     E = []
@@ -69,8 +77,8 @@ def create_graph(rooms):
     graph = (V,E)
     return graph
 
+## Return all strongly connected components using Kosaraju's algorithm
 def scc(graph):
-    ## See Kosaraju's Algorithm
     vertices = graph[0]
     edges = graph[1]
     visited = []
@@ -107,7 +115,9 @@ def scc(graph):
         recur_assign(each,each)
 
     return components
-        
+
+## Main class
+## This will be called when the program is run from Python Games.py   
 class Main():
     def __init__(self,verbose=False):
         self.current_cave = None
@@ -139,13 +149,14 @@ class Main():
                 elif option == "1":
                     input_valid = True
                     # Launch Cave Selection
-                    self.menu_select_cave()
-                    # Build cave (either from file or from built-in function
-                    ready = self.build_cave()
-                    if ready:
-                        self.game_loop()
-                    else:
-                        print("Cave failed validation")
+                    default = self.menu_select_cave()
+                    if default != None:
+                        # Build cave (either from file or from built-in function
+                        ready = self.build_cave(default)
+                        if ready:
+                            self.game_loop()
+                        else:
+                            print("Cave failed validation")
                 elif option == "2":
                     input_valid = True
                     # Launch Cave Creation
@@ -199,12 +210,15 @@ class Main():
             selected_option = input("Please choose an option: ")
             if selected_option == "0":
                 input_valid = True
+                return None
             elif selected_option == "1":
                 input_valid = True
                 self.menu_load_cave()
+                return False
             elif selected_option == "2":
                 input_valid = True
                 self.menu_preset_cave()
+                return True
             else:
                 print("Invalid option")
 
@@ -268,16 +282,16 @@ class Main():
             player.display_info()
         input("Press enter to return to the main menu")
 
-    def build_cave(self):
+    def build_cave(self,default=False):
         run_game = False
-        if self.current_cave != None and self.cave_file_name == None:
+        if default:
             # Built-in Cave
             self.cave.name = self.current_cave
             self.cave.build_preset()
             if self.verbose: self.cave.display()
             if self.verbose: self.cave.render()
             run_game = self.cave.display_validation()
-        elif self.cave_file_name != None:
+        else:
             # Load from file
             self.cave.name = self.current_cave
             self.cave.load()
@@ -292,9 +306,10 @@ class Main():
         if self.current_cave == None:
             self.current_cave = input("Please enter a name for your cave: ")
             self.cave_file_name = self.current_cave
-        print(SECTION_BREAK)
+            self.cave.name = self.current_cave
         while not done:
             print("Custom Cave Creation Under Construction")
+            print(SECTION_BREAK)
             self.cave.display_parameters()
             print(LINE_BREAK)
             print("1: Modify rooms")
@@ -311,14 +326,109 @@ class Main():
             input_valid = False
             while not input_valid:
                 selected_option = input("Please choose an option: ")
-                if selected_option == "1":
-                    print(section_break)
+                if selected_option == "0": ## Exit
+                    print(SECTION_BREAK)
                     confirm = yesno("Are you sure you have finished? [Y/N] ")
                     if confirm == "Y":
                         input_valid = True
                         done = True
+                elif selected_option == "1": ## Modify rooms
+                    input_valid = True
+                    print(SECTION_BREAK)
+                    self.cave.display_parameters()
+                    print(LINE_BREAK)
+                    print("1: Add rooms")
+                    print("2: Remove rooms")
+                    print("0: Back")
+                    input_valid_1 = False
+                    while not input_valid_1:
+                        selected_option = input("Please choose an option: ")
+                        if selected_option == "0":
+                            input_valid_1 = True
+                        elif selected_option == "1":
+                            input_valid_1 = True
+                            check = False
+                            print(SECTION_BREAK)
+                            while not check:
+                                try:
+                                    count = input("How many rooms do you wish to add? ")
+                                    count = int(count)
+                                    if count > 0:
+                                        check = True
+                                    else:
+                                        print("Invalid input")
+                                except:
+                                    print("Invalid input")
+                            if count > 1:
+                                confirm = yesno("Do you wish to manually name these rooms? [Y/N] ")
+                            else:
+                                confirm = yesno("Do you wish to manually name this room? [Y/N] ")
+                            for i in range(1,count+1):
+                                if confirm == "Y":
+                                    self.cave.add_room(input("Room " + str(i) + ": Enter name: "))
+                                else:
+                                    self.cave.add_room(str(i))
+                        elif selected_option == "2":
+                            input_valid_1 = True
+                            print(SECTION_BREAK)
+                            room_list = []
+                            for room_id,room_data in self.cave.rooms.items():
+                                room_list.append(room_id)
+                            self.cave.display_simple()
+                            print(LINE_BREAK)
+                            check = False
+                            while not check:
+                                delete_room = input("Enter name of room to delete: ")
+                                if delete_room in room_list:
+                                    check = True
+                                else:
+                                    print("Invalid room name")
+                            self.cave.remove_room(delete_room)
+                        else:
+                            print("Invalid option")
+                elif selected_option == "2": ## Modify tunnels
+                    pass
+                elif selected_option == "3": ## Modify contents
+                    pass
+                elif selected_option == "4": ## Randomise contents
+                    pass
+                elif selected_option == "5": ## Validate cave
+                    pass
+                elif selected_option == "6": ## Load cave
+                    pass
+                elif selected_option == "7": ## Save cave
+                    input_valid = True
+                    print(SECTION_BREAK)
+                    self.cave.display_parameters()
+                    print(LINE_BREAK)
+                    confirm = yesno("Do you wish to save? [Y/N] ")
+                    if confirm == "Y":
+                        self.cave.save()
+                elif selected_option == "8": ## Reset cave
+                    input_valid = True
+                    print(SECTION_BREAK)
+                    confirm = yesno("Are you sure you want to reset? [Y/N] ")
+                    if confirm == "Y":
+                        print(SECTION_BREAK)
+                        self.cave.display_parameters()
+                        print(LINE_BREAK)
+                        confirm = yesno("Do you wish to save? [Y/N] ")
+                        if confirm == "Y":
+                            self.cave.save()
+                        print(SECTION_BREAK)
+                        self.current_cave = input("Please enter a name for your cave: ")
+                        self.cave_file_name = self.current_cave
+                        self.cave.name = self.current_cave
+                        self.cave = CaveSystem(self.current_cave)
+                elif selected_option == "9": ## Rename cave
+                    input_valid = True
+                    self.current_cave = input("Please enter a name for your cave: ")
+                    self.cave_file_name = self.current_cave
+                    self.cave.name = self.current_cave
+                else:
+                    print("Invalid option")
         self.cave.display_parameters()
-        print(section_break)
+        print(LINE_BREAK)
         confirm = yesno("Do you wish to save? [Y/N] ")
         if confirm == "Y":
             self.cave.save()
@@ -330,7 +440,10 @@ class CaveSystem():
         self.verbose = verbose
         
     def add_room(self,id):
-        self.rooms[id] = [[],[]]
+        if id not in self.rooms:
+            self.rooms[id] = [[],[]]
+        else:
+            print("Room",id,"already exists")
         
     def remove_room(self,id):
         self.remove_tunnel(id)
@@ -381,7 +494,7 @@ class CaveSystem():
             print("Name:",self.name)
         for room_id,room_data in self.rooms.items():
             print(LINE_BREAK)
-            print("Room ID:",room_id)
+            print("Room Name:",room_id)
             output = ""
             links = ""
             for link in room_data[ROOM_LINKS]:
@@ -396,6 +509,23 @@ class CaveSystem():
                 contents = "Empty"
             print("Contents: " + contents)
         print(LINE_BREAK)
+
+    def display_simple(self):
+        for room_id,room_data in self.rooms.items():
+            print("Room Name:",room_id,end="")
+            output = ""
+            links = ""
+            for link in room_data[ROOM_LINKS]:
+                links += str(link)+", "
+            links = links[:-2]
+            print("; Tunnels To: " + links,end="")
+            contents = ""
+            for item in room_data[ROOM_CONTENTS]:
+                contents += str(item)+", "
+            contents = contents[:-2]
+            if contents == "":
+                contents = "Empty"
+            print("; Contents: " + contents,end="\n")
 
     def validate(self,verbosity=0):
         ## verbosity = 0 -> Output boolean 'valid'
@@ -418,48 +548,9 @@ class CaveSystem():
         exit_status = 0
         bat_status = 0
         failed_partitions = []
-        
-        for room_id,room_data in self.rooms.items():
-            ## Must be exactly one Wumpus in a room containing only the Wumpus
-            if room_data[ROOM_CONTENTS] == [WUMPUS] and wumpus_status == 0:
-                wumpus_status = 1
-            elif room_data[ROOM_CONTENTS] == [WUMPUS] and wumpus_status >= 1:
-                wumpus_status = 2
-            elif WUMPUS in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [WUMPUS]:
-                wumpus_status = 3
-
-            ## Must be exactly one Gold in a room containing only the Gold
-            if room_data[ROOM_CONTENTS] == [GOLD] and gold_status == 0:
-                gold_status = 1
-            elif room_data[ROOM_CONTENTS] == [GOLD] and gold_status >= 1:
-                gold_status = 2
-            elif GOLD in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [GOLD]:
-                gold_status = 3
-                
-            ## Must be exactly one Exit in a room containing only the Exit
-            if room_data[ROOM_CONTENTS] == [EXIT] and exit_status == 0:
-                exit_status = 1
-            elif room_data[ROOM_CONTENTS] == [EXIT] and exit_status >= 1:
-                exit_status = 2
-            elif EXIT in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [EXIT]:
-                exit_status = 3
-
-            ## Room containing Bats must only contain Bats
-            if room_data[ROOM_CONTENTS] == [BATS] and bat_status == 0:
-                bat_status = 1
-            elif BATS in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [BATS]:
-                bat_status = 2
-                
-        ## Exit must not be connected to any room containing a Pit, the Wumpus or Bats
-        if exit_status == 1:
-            room_ok = True
-            room_check = list(self.find_items([EXIT],False))[0]
-            for link in self.rooms[room_check][ROOM_LINKS]:
-                if PIT in self.rooms[link][ROOM_CONTENTS] or WUMPUS in self.rooms[link][ROOM_CONTENTS] or BATS in self.rooms[link][ROOM_CONTENTS]:
-                    room_ok = False
-            if not room_ok:
-                exit_status = 4
-        
+        check_wumpus = False
+        check_gold = False
+        partitions = None
         ## Must be connected
         is_connected = False
         for room_id in cave_1:
@@ -472,9 +563,48 @@ class CaveSystem():
             if temp_connected == True:
                 is_connected = True
                 break
-
-        partitions = None
         if is_connected:
+            for room_id,room_data in self.rooms.items():
+                ## Must be exactly one Wumpus in a room containing only the Wumpus
+                if room_data[ROOM_CONTENTS] == [WUMPUS] and wumpus_status == 0:
+                    wumpus_status = 1
+                elif room_data[ROOM_CONTENTS] == [WUMPUS] and wumpus_status >= 1:
+                    wumpus_status = 2
+                elif WUMPUS in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [WUMPUS]:
+                    wumpus_status = 3
+
+                ## Must be exactly one Gold in a room containing only the Gold
+                if room_data[ROOM_CONTENTS] == [GOLD] and gold_status == 0:
+                    gold_status = 1
+                elif room_data[ROOM_CONTENTS] == [GOLD] and gold_status >= 1:
+                    gold_status = 2
+                elif GOLD in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [GOLD]:
+                    gold_status = 3
+                
+                ## Must be exactly one Exit in a room containing only the Exit
+                if room_data[ROOM_CONTENTS] == [EXIT] and exit_status == 0:
+                    exit_status = 1
+                elif room_data[ROOM_CONTENTS] == [EXIT] and exit_status >= 1:
+                    exit_status = 2
+                elif EXIT in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [EXIT]:
+                    exit_status = 3
+
+                ## Room containing Bats must only contain Bats
+                if room_data[ROOM_CONTENTS] == [BATS] and bat_status == 0:
+                    bat_status = 1
+                elif BATS in room_data[ROOM_CONTENTS] and room_data[ROOM_CONTENTS] != [BATS]:
+                    bat_status = 2
+                
+            ## Exit must not be connected to any room containing a Pit, the Wumpus or Bats
+            if exit_status == 1:
+                room_ok = True
+                room_check = list(self.find_items([EXIT],False))[0]
+                for link in self.rooms[room_check][ROOM_LINKS]:
+                    if PIT in self.rooms[link][ROOM_CONTENTS] or WUMPUS in self.rooms[link][ROOM_CONTENTS] or BATS in self.rooms[link][ROOM_CONTENTS]:
+                        room_ok = False
+                if not room_ok:
+                    exit_status = 4
+
             partitions = scc(create_graph(self.rooms))
         ## For every Strongly Connected Component if more than one
             if len(partitions) > 1:
@@ -496,10 +626,10 @@ class CaveSystem():
                                     failed_partitions.append([partition,"Fail - Unable to reach Bats from room_id "+str(room_id)])
                         
             
-        ## Wumpus must be reachable from the Exit
-        ## Gold must be reachable from the Exit
-        check_wumpus = self.df_walk(list(self.find_items([EXIT],False))[0],WUMPUS)
-        check_gold = self.df_walk(list(self.find_items([EXIT],False))[0],GOLD)
+            ## Wumpus must be reachable from the Exit
+            ## Gold must be reachable from the Exit
+            check_wumpus = self.df_walk(list(self.find_items([EXIT],False))[0],WUMPUS)
+            check_gold = self.df_walk(list(self.find_items([EXIT],False))[0],GOLD)
 
         ## return error statements
         if wumpus_status == 0:
@@ -567,12 +697,16 @@ class CaveSystem():
         if check_wumpus == None:
             valid = False
             if verbosity >= 2: yield "Fail - Unable to reach Wumpus"
+        elif check_wumpus == False:
+            pass
         else:
             if verbosity >= 3: yield "Pass - Wumpus reached in room " + str(check_wumpus)
             
         if check_gold == None:
             valid = False
             if verbosity >= 2: yield "Fail - Unable to reach Gold"
+        elif check_wumpus == False:
+            pass
         else:
             if verbosity >= 3: yield "Pass - Gold reached in room " + str(check_gold)
 
@@ -870,6 +1004,7 @@ class CaveSystem():
     def display_parameters(self):
         print("Name: " + self.name)
         print("Number of Rooms: " + str(len(self.rooms)))
+        self.display_simple()
         if len(self.rooms) > 0:
             self.display_validation()
     
