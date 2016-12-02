@@ -4,6 +4,7 @@ import re
 import os
 import queue
 import os.path
+import fnmatch
 ## Make graphviz optional
 try:
     from graphviz import Digraph
@@ -336,6 +337,7 @@ class Main():
                     input_valid = True
                     print(SECTION_BREAK)
                     self.cave.display_parameters()
+                    self.cave.display_simple()
                     print(LINE_BREAK)
                     print("1: Add rooms")
                     print("2: Remove rooms")
@@ -391,15 +393,57 @@ class Main():
                 elif selected_option == "3": ## Modify contents
                     pass
                 elif selected_option == "4": ## Randomise contents
-                    pass
+                    input_valid = True
+                    print(SECTION_BREAK)
+                    confirm = yesno("Are you sure you wish to randomise the cave? [Y/N] ")
+                    if confirm == "Y":
+                        print(LINE_BREAK)
+                        confirm = yesno("Do you wish to clear the cave first? [Y/N] ")
+                        if confirm == "Y":
+                            print(SECTION_BREAK)
+                            self.cave.display_parameters()
+                            print(LINE_BREAK)
+                            confirm = yesno("Do you wish to save? [Y/N] ")
+                            if confirm == "Y":
+                                self.cave.save()
+                            print(SECTION_BREAK)
+                            for room_id,room_data in self.cave.rooms.items():
+                                room_data[ROOM_CONTENTS] = []
+                        self.cave.add_random_contents(True)
                 elif selected_option == "5": ## Validate cave
-                    pass
+                    self.cave.display_validation()
+                    input_valid = True
                 elif selected_option == "6": ## Load cave
-                    pass
+                    input_valid = True
+                    print(SECTION_BREAK)
+                    confirm = yesno("Are you sure you want to load an existing cave? [Y/N] ")
+                    if confirm == "Y":
+                        print(SECTION_BREAK)
+                        self.cave.display_parameters()
+                        self.cave.display_simple()
+                        print(LINE_BREAK)
+                        confirm = yesno("Do you wish to save? [Y/N] ")
+                        if confirm == "Y":
+                            self.cave.save()
+                        print(SECTION_BREAK)
+                        print("Available Caves:")
+                        caves = self.list_caves()
+                        print(caves)
+                        input_valid = False
+                        while not input_valid:
+                            selected_cave = input("Enter the name of a cave to load: ")
+                            if selected_cave in caves:
+                                input_valid = True
+                                self.cave.load(selected_cave)
+                                self.current_cave = selected_cave
+                                self.cave_file_name = selected_cave
+                            else:
+                                print("Invalid name")
                 elif selected_option == "7": ## Save cave
                     input_valid = True
                     print(SECTION_BREAK)
                     self.cave.display_parameters()
+                    self.cave.display_simple()
                     print(LINE_BREAK)
                     confirm = yesno("Do you wish to save? [Y/N] ")
                     if confirm == "Y":
@@ -411,6 +455,7 @@ class Main():
                     if confirm == "Y":
                         print(SECTION_BREAK)
                         self.cave.display_parameters()
+                        self.cave.display_simple()
                         print(LINE_BREAK)
                         confirm = yesno("Do you wish to save? [Y/N] ")
                         if confirm == "Y":
@@ -428,10 +473,19 @@ class Main():
                 else:
                     print("Invalid option")
         self.cave.display_parameters()
+        self.cave.display_simple()
         print(LINE_BREAK)
         confirm = yesno("Do you wish to save? [Y/N] ")
         if confirm == "Y":
             self.cave.save()
+
+    def list_caves(self):
+        caves = [f for f in os.listdir(FILE_PATH + "\\Data\\Wumpus\\Maps\\") if os.path.isfile(os.path.join(FILE_PATH + "\\Data\\Wumpus\\Maps\\",f))]
+        caves = []
+        for file in os.listdir(FILE_PATH + "\\Data\\Wumpus\\Maps\\"):
+            if fnmatch.fnmatch(file, "*.txt"):
+                caves.append(os.path.splitext(file)[0])
+        return(caves)
 
 class CaveSystem():
     def __init__(self,name=None,verbose = False):
@@ -1004,7 +1058,6 @@ class CaveSystem():
     def display_parameters(self):
         print("Name: " + self.name)
         print("Number of Rooms: " + str(len(self.rooms)))
-        self.display_simple()
         if len(self.rooms) > 0:
             self.display_validation()
     
